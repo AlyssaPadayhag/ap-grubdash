@@ -1,44 +1,15 @@
 const path = require("path");
 
-// Use the existing dishes data
+// using existing dishes data
 const dishes = require(path.resolve("src/data/dishes-data"));
 
-// Use this function to assign ID's when necessary
+// function to assign ID's when needed
 const nextId = require("../utils/nextId");
 
-// TODO: Implement the /dishes handlers needed to make the tests pass
+// middleware functions: Create, Read/List, Update dishes
+// dishes cannot be deleted, no delete function
 
-// In the src/dishes/dishes.controller.js file, add handlers and
-// middleware functions to create, read, update, and list dishes. Note that dishes cannot be deleted.
-
-function list(req, res) {
-    res.json({ data: dishes });
-}
-
-function bodyDataHas(propertyName) {
-    return function(req, res, next) {
-        const { data = {} } = req.body;
-        if(data[propertyName]) {
-            return next();
-        }
-        next({
-            status: 400,
-            message: `Must include a ${propertyName}`
-        });
-    };
-}
-
-function pricePropertyIsValid(req, res, next) {
-    const { data: { price } = {} } = req.body;
-    if(price < 0 || !Number.isInteger(price)) {
-        return next({
-            status: 400,
-            message: `price`
-        });
-    }
-    next();
-}
-
+// creates a new dish, pushes new dish into existing dishes data and assigns a new ID
 function create(req, res) {
     const { data: { name, description, price, image_url } = {} } = req.body;
     const newDish = {
@@ -52,6 +23,58 @@ function create(req, res) {
     res.status(201).json({ data: newDish });
 }
 
+// returns existing dish: single object - id, name, description, price
+function read(req, res) {
+    res.json({ data: res.locals.dish });
+  }
+
+// returns list of dishes: array of objects - id, name, description, price
+function list(req, res) {
+    res.json({ data: dishes });
+}
+
+// updates an existing dish
+function update(req, res) {
+    const dish = res.locals.dish;
+    const { data: { name, description, price, image_url } = {} } = req.body;
+
+    dish.name = name;
+    dish.description = description;
+    dish.price = price;
+    dish.image_url = image_url;
+
+    res.json({ data: dish });
+}
+
+/** VALIDATION **/
+
+// validate body properties, in this case: name, description, price, image_url
+function bodyDataHas(propertyName) {
+    return function(req, res, next) {
+        const { data = {} } = req.body;
+        if(data[propertyName]) {
+            return next();
+        }
+        next({
+            status: 400,
+            message: `Must include a ${propertyName}`
+        });
+    };
+}
+
+// validate price property: 0 or less, must be an integer
+function pricePropertyIsValid(req, res, next) {
+    const { data: { price } = {} } = req.body;
+    if(price < 0 || !Number.isInteger(price)) {
+        return next({
+            status: 400,
+            message: `price`
+        });
+    }
+    next();
+}
+
+// validate if dish exists
 function dishExists(req, res, next) {
     const { dishId } = req.params;
     const foundDish = dishes.find((dish) => dish.id === dishId);
@@ -66,6 +89,7 @@ function dishExists(req, res, next) {
     });
 }
 
+// validate if dish ID in body/object matches route ID
 function validateDishBodyId(req, res, next) {
 	const { dishId } = req.params;
 	const { data: { id } = {} } = req.body;
@@ -81,25 +105,7 @@ function validateDishBodyId(req, res, next) {
 	});
 }
 
-function read(req, res) {
-  res.json({ data: res.locals.dish });
-}
-
-function update(req, res) {
-    const dish = res.locals.dish;
-    const { data: { name, description, price, image_url } = {} } = req.body;
-
-    dish.name = name;
-    dish.description = description;
-    dish.price = price;
-    dish.image_url = image_url;
-
-    res.json({ data: dish });
-}
-
-// middleware functions: create, read, update, list dishes
-// dishes cannot be deleted, no delete function
-
+// exports and order for middleware functions
 module.exports = {
     create: [
         bodyDataHas("name"),

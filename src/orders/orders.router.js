@@ -3,6 +3,8 @@ const router = require("express").Router();
 const controller = require("./orders.controller");
 const methodNotAllowed = require("../errors/methodNotAllowed");
 
+// allowed methods for routes
+
 router
   .route("/:orderId")
   .get(controller.read)

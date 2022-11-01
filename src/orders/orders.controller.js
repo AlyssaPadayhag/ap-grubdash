@@ -1,11 +1,65 @@
 const path = require("path");
 
-// Using the existing order data
+// using existing order data
 const orders = require(path.resolve("src/data/orders-data"));
 
-// Using this function to assigh ID's when necessary
+// function to assign ID's when needed
 const nextId = require("../utils/nextId");
 
+// middleware functions: Create, Read/List, Update, Destroy orders
+
+// creates a new order, push new order into existing order data
+function create(req, res) {
+  const reqBody = res.locals.reqBody;
+  const newOrder = {
+    ...reqBody,
+    id: nextId(),
+  };
+  orders.push(newOrder);
+  res.status(201).json({ data: newOrder });
+}
+
+// returns existing order: single object - id, deliverTo, mobileNumber, status, dishes
+function read(req, res) {
+  res.json({ data: res.locals.order });
+}
+
+// returns list of orders: array of objects - id, deliverTo, mobileNumber, status, dishes
+function list(req, res) {
+  res.json({ data: orders });
+}
+
+// update existing order
+function update(req, res) {
+  const reqBody = res.locals.reqBody;
+  const order = res.locals.order;
+
+  // create array of property names
+  const existingOrderProperties = Object.getOwnPropertyNames(order);
+
+  for (let i = 0; i < existingOrderProperties.length; i++) {
+    // access each order object key within the array
+    let propName = existingOrderProperties[i];
+    // update each value if there is a difference between the existing order and the req body order
+    if (propName !== "id" && order[propName] !== reqBody[propName]) {
+      order[propName] = reqBody[propName];
+    }
+  }
+  res.json({ data: order });
+}
+
+// delete order
+function destroy(req, res) {
+  const orderId = res.locals.orderId;
+  const orderIndex = orders.findIndex((order) => order.id === orderId);
+  orders.splice(orderIndex, 1);
+  res.sendStatus(204);
+}
+
+/** VALIDATION **/
+
+// individually validating each property if it exists:
+// deliverTo, mobileNumber, dishes, dish quantity
 function bodyHasDeliverToProperty(req, res, next) {
   const { data = {} } = req.body;
 
@@ -15,7 +69,7 @@ function bodyHasDeliverToProperty(req, res, next) {
       message: "Order must include a deliverTo property.",
     });
   }
-  // Passing the reqest body data to the next middleware/handler functions using "response.locals"
+  // pass the reqest body data to the next middleware/handler functions using "response.locals"
   res.locals.reqBody = data;
   return next();
 }
@@ -65,11 +119,11 @@ function bodyHasDishQuantityProperty(req, res, next) {
   );
 
   if (!indexesOfDishesWithoutQuantityProperty.length) {
-    // All dishes have the right quantity property
+    // all dishes have the right quantity property
     return next();
   }
 
-  // If there are dishes without the right quantity property, the following code will run:
+  // if there are dishes without the right quantity property, the following code will run:
   if (indexesOfDishesWithoutQuantityProperty.length > 1) {
     const stringOfDishIndex = indexesOfDishesWithoutQuantityProperty.join(", ");
 
@@ -85,7 +139,7 @@ function bodyHasDishQuantityProperty(req, res, next) {
   });
 }
 
-// Validation Function for Read, Update, and Delete functions:
+// validate if order exists for read, update, destroy
 function orderExists(req, res, next) {
   const { orderId } = req.params;
   const foundOrder = orders.find((order) => order.id === orderId);
@@ -103,12 +157,12 @@ function orderExists(req, res, next) {
   });
 }
 
-// Validation Functions for PUT request/Update function:
+// validate PUT/update request
 function bodyIdMatchesRouteId(req, res, next) {
   const orderId = res.locals.orderId;
   const reqBody = res.locals.reqBody;
 
-  // The id property is not required in the body of the request, but if it is present it must match :orderId from the route
+  // id property is not required in the body of the request, but if it is present it must match :orderId from the route
   if (reqBody.id) {
     if (reqBody.id === orderId) {
       return next();
@@ -143,7 +197,7 @@ function bodyHasStatusProperty(req, res, next) {
   return next();
 }
 
-// Validation Function for Delete request:
+// validate for destroy request - must be pending
 function orderStatusIsPending(req, res, next) {
   const order = res.locals.order;
 
@@ -157,52 +211,7 @@ function orderStatusIsPending(req, res, next) {
   return next();
 }
 
-// Route Handlers:
-function destroy(req, res) {
-  const orderId = res.locals.orderId;
-  const orderIndex = orders.findIndex((order) => order.id === orderId);
-  orders.splice(orderIndex, 1);
-  res.sendStatus(204);
-}
-
-function update(req, res) {
-  const reqBody = res.locals.reqBody;
-  const order = res.locals.order;
-
-  // Creating array of property names
-  const existingOrderProperties = Object.getOwnPropertyNames(order);
-
-  for (let i = 0; i < existingOrderProperties.length; i++) {
-    // Accessing each order object key within the array
-    let propName = existingOrderProperties[i];
-    // Updating each value if there is a difference between the existing order and the req body order
-    if (propName !== "id" && order[propName] !== reqBody[propName]) {
-      order[propName] = reqBody[propName];
-    }
-  }
-  res.json({ data: order });
-}
-
-function read(req, res) {
-  res.json({ data: res.locals.order });
-}
-
-function create(req, res) {
-  const reqBody = res.locals.reqBody;
-  const newOrder = {
-    ...reqBody,
-    id: nextId(),
-  };
-  orders.push(newOrder);
-  res.status(201).json({ data: newOrder });
-}
-
-function list(req, res) {
-  res.json({ data: orders });
-}
-
-// handlers and middleware functions: create, read, update, delete, list orders
-
+// exports and order for middleware functions
 module.exports = {
   create: [
     bodyHasDeliverToProperty,
