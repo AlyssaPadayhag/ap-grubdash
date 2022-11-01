@@ -14,5 +14,5 @@ GrubDash is a Thinkful project, focused on backend concepts. I was tasked with s
 - Frontend application was given and did not need to be edited
 
 # Images
-                        Home Page
+Home Page
 ![This is an image](./images/home.png)
